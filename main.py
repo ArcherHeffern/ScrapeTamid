@@ -71,7 +71,7 @@ def parse_args() -> Config:
         out=args.out,
         delay=args.delay
     )
-    payload['email'] = config.email
+    payload['Email'] = config.email
     payload['password'] = config.password
     return config
 
@@ -98,24 +98,24 @@ def scraper(config: Config, scraper_function):
 </head>
 <body>""")
 
-        for i in range(config.start, config.end + 1):
-            print(f"{i - config.start + 1}/{config.end - config.start + 1}", end="")
-            internal_start = time.time()
-            html = s.get(config.base_url + str(i))
-            html = html.text
-            company = scraper_function(i, html, config.base_url)
-            if company:
-                print_to_output_file(company, f)
-                valid_count += 1
-            internal_end = time.time()
-            time.sleep(max(0, config.delay - (internal_end - internal_start)))
+            for i in range(config.start, config.end + 1):
+                print(f"{i - config.start + 1}/{config.end - config.start + 1}", end="")
+                internal_start = time.time()
+                html = s.get(config.base_url + str(i))
+                html = html.text
+                company = scraper_function(i, html, config.base_url)
+                if company:
+                    print_to_output_file(company, f)
+                    valid_count += 1
+                internal_end = time.time()
+                time.sleep(max(0, config.delay - (internal_end - internal_start)))
 
-            # Stats
-            f.write("</body></html>")
-            if config.debug:
-                total_time = time.time() - start_time
-                print(
-                    f"Complete\nRuntime: {total_time}\nRuntime minus delay: {total_time - config.delay * (config.end - config.start)}\nValid items: {valid_count}")
+                # Stats
+                f.write("</body></html>")
+                if config.debug:
+                    total_time = time.time() - start_time
+                    print(
+                        f"Complete\nRuntime: {total_time}\nRuntime minus delay: {total_time - config.delay * (config.end - config.start)}\nValid items: {valid_count}")
 
 
 def login(url, payload, session):
