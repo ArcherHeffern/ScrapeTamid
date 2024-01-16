@@ -2,7 +2,6 @@ from bs4 import BeautifulSoup
 import argparse
 from dataclasses import dataclass
 from typing import Optional
-from argparse import Namespace
 import requests
 import time
 from scrapers.scrapeConsulting import get_consulting_content
@@ -57,7 +56,7 @@ def parse_args() -> Config:
     parser.add_argument('password', help='Tamid Platform password')
     parser.add_argument(
         'start', type=int, help='Starting index')
-    parser.add_argument('end', type=int, help='Ending index')
+    parser.add_argument('end', type=int, help='Ending index (inclusive)')
     parser.add_argument('-d', '--delay', type=int, default=.5,
                         help='Delay to prevent being ratelimited')
     args = parser.parse_args()
