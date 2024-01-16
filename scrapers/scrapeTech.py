@@ -15,7 +15,6 @@ def get_tech_content(id: int, html_file, base_url) -> dict:
   # contact
   # contains: deliverable description and work time 
   list_group_items = box1.find_all('li', class_= 'list-group-item')
-  print(f"Len {len(list_group_items)}")
   if len(list_group_items) < 13:
     print('\terror - not tech')
     return {}

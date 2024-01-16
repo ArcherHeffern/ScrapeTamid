@@ -25,7 +25,7 @@ class Config:
     category: str
     out: str
     delay: float
-    debug: bool = False
+    summary: bool = True
     test: Optional[int] = None
     base_url: str = 'https://apps.tamidgroup.org/Consulting/Company/posting?id='
     login_url = 'https://apps.tamidgroup.org/login'
@@ -78,6 +78,8 @@ def parse_args() -> Config:
 def scraper(config: Config, scraper_function):
 
     valid_count = 0
+    first_index = None
+    last_index = None
 
     with requests.Session() as s:
         start_time = time.time()
@@ -104,17 +106,25 @@ def scraper(config: Config, scraper_function):
                 html = html.text
                 company = scraper_function(i, html, config.base_url)
                 if company:
+                    if first_index is None:
+                        first_index = i
+                    last_index = i
                     print_to_output_file(company, f)
                     valid_count += 1
                 internal_end = time.time()
                 time.sleep(max(0, config.delay - (internal_end - internal_start)))
 
-                # Stats
-                f.write("</body></html>")
-                if config.debug:
-                    total_time = time.time() - start_time
-                    print(
-                        f"Complete\nRuntime: {total_time}\nRuntime minus delay: {total_time - config.delay * (config.end - config.start)}\nValid items: {valid_count}")
+            # Stats
+            f.write("</body></html>")
+            if config.summary:
+                total_time = time.time() - start_time
+                print("-"*25)
+                print("Summary")
+                print(f"Runtime: {total_time}")
+                print(f"Runtime minus delay: {total_time - config.delay * (config.end - config.start)}")
+                print(f"Valid items: {valid_count}")
+                print(f"First valid index: {first_index}")
+                print(f"Last valid index: {last_index}")
 
 
 def login(url, payload, session):
