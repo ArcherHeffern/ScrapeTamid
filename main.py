@@ -74,9 +74,9 @@ def parse_args() -> Config:
     payload['password'] = config.password
     return config
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def scraper(config: Config, scraper_function):
-
     valid_count = 0
     first_index = None
     last_index = None
@@ -84,11 +84,12 @@ def scraper(config: Config, scraper_function):
     with requests.Session() as s:
         start_time = time.time()
         if not login(config.login_url, payload, s):
-            print('authetication error')
+            print('authentication error')
             exit(1)
         print("Logged in")
         with open(config.out, 'w') as f:
 
+            # Write the initial HTML structure with Bootstrap
             f.write("""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -96,26 +97,33 @@ def scraper(config: Config, scraper_function):
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projects</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>""")
+<body class="bg-light">
+<div class="container my-4">
+""")
 
-            for i in range(config.start, config.end + 1):
-                print(f"{i - config.start + 1}/{config.end - config.start + 1}", end="")
-                internal_start = time.time()
+            def fetch_and_process(i):
                 html = s.get(config.base_url + str(i))
                 html = html.text
                 company = scraper_function(i, html, config.base_url)
-                if company:
-                    if first_index is None:
-                        first_index = i
-                    last_index = i
-                    print_to_output_file(company, f)
-                    valid_count += 1
-                internal_end = time.time()
-                time.sleep(max(0, config.delay - (internal_end - internal_start)))
+                return i, company
 
-            # Stats
-            f.write("</body></html>")
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = {executor.submit(fetch_and_process, i): i for i in range(config.start, config.end + 1)}
+                for future in as_completed(futures):
+                    i, company = future.result()
+                    print(f"{i - config.start + 1}/{config.end - config.start + 1}", end="")
+                    if company:
+                        if first_index is None:
+                            first_index = i
+                        last_index = i
+                        print_to_output_file(company, f)
+                        valid_count += 1
+
+            # End of the container and body
+            f.write("</div></body></html>")
             if config.summary:
                 total_time = time.time() - start_time
                 print("-"*25)
@@ -151,13 +159,31 @@ def login(url, payload, session):
 
 
 def print_to_output_file(content: dict, f):
-    """Takes dict as input and writes the content to output file"""
+    """Takes dict as input and writes the content to output file within a Bootstrap card"""
+    f.write('<div class="card mb-4"><div class="card-body">')
+    
+    # Title of the card
+    if 'name' in content:
+        f.write(f"<h5 class='card-title'><b>{content['name']}</b></h5>")
+    
+    # Industry subtitle
+    if 'industry' in content:
+        f.write(f"<h6 class='card-subtitle mb-2 text-muted'>{content['industry']}</h6>")
+    
+    # Iterate through the rest of the content
     for key, value in content.items():
-        if key == "url" or key == "website":
-            f.write(f"<div><b>{key}</b>: <a href={value}>{value}</a><br><br>")
+        # Skip the 'name' and 'industry' since they're already handled
+        if key in ['name', 'industry']:
+            continue
+
+        # Handle URL and website links differently
+        if key in ['url', 'website']:
+            f.write(f"<p class='card-text'><strong>{key.capitalize().replace('_', ' ')}:</strong> <a href='{value}' target='_blank'>{value}</a></p>")
         else:
-            f.write(f"<div><b>{key}</b>: {value}</div><br>")
-    f.write("<hr><br>")
+            # Write the other key-value pairs
+            f.write(f"<p class='card-text'><strong>{key.capitalize().replace('_', ' ')}:</strong> {value}</p>")
+    
+    f.write("</div></div>")
 
 
 if __name__ == '__main__':
